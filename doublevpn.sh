@@ -119,9 +119,9 @@ if [[ -e /etc/openvpn/server.conf ]]; then
 			cd /etc/openvpn/easy-rsa/
 			./easyrsa --batch revoke $CLIENT
 			./easyrsa gen-crl
-			#rm -rf pki/reqs/$CLIENT.req
-			#rm -rf pki/private/$CLIENT.key
-			#rm -rf pki/issued/$CLIENT.crt
+			rm -rf pki/reqs/$CLIENT.req
+			rm -rf pki/private/$CLIENT.key
+			rm -rf pki/issued/$CLIENT.crt
 			rm -rf /etc/openvpn/crl.pem
 			cp /etc/openvpn/easy-rsa/pki/crl.pem /etc/openvpn/crl.pem
 			# CRL is read with each client connection, when OpenVPN is dropped to nobody
@@ -134,8 +134,8 @@ if [[ -e /etc/openvpn/server.conf ]]; then
 			echo ""
 			read -p "Do you really want to remove OpenVPN? [y/n]: " -e -i n REMOVE
 			if [[ "$REMOVE" = 'y' ]]; then
-				PORT=$(grep '^port ' /etc/openvpn/server.conf | cut -d " " -f 2)
-				PROTOCOL=$(grep '^proto ' /etc/openvpn/server.conf | cut -d " " -f 2)
+				PORT=$(grep '^port ' /etc/openvpn/keys/server.conf | cut -d " " -f 2)
+				PROTOCOL=$(grep '^proto ' /etc/openvpn/keys/server.conf | cut -d " " -f 2)
 				if pgrep firewalld; then
 					IP=$(firewall-cmd --direct --get-rules ipv4 nat POSTROUTING | grep '\-s 10.8.0.0/24 -j SNAT --to ' | cut -d " " -f 7)
 					# Using both permanent and not permanent rules to avoid a firewalld reload.
@@ -271,11 +271,11 @@ else
          fi
 	./easyrsa gen-crl
 	# Move the stuff we need
-	cp pki/ca.crt pki/private/ca.key pki/dh.pem pki/issued/server.crt pki/private/server.key /etc/openvpn/easy-rsa/pki/crl.pem /etc/openvpn
+	cp pki/ca.crt pki/private/ca.key pki/dh.pem pki/issued/server.crt pki/private/server.key /etc/openvpn/easy-rsa/pki/crl.pem /etc/openvpn/keys
 	# CRL is read with each client connection, when OpenVPN is dropped to nobody
-	chown nobody:$GROUPNAME /etc/openvpn/crl.pem
+	chown nobody:$GROUPNAME /etc/openvpn/keys/crl.pem
 	# Generate key for tls-auth
-	openvpn --genkey --secret /etc/openvpn/ta.key
+	openvpn --genkey --secret /etc/openvpn/keys/ta.key
 	# Generate server.conf
 	echo "port $PORT
 proto $PROTOCOL
@@ -283,42 +283,42 @@ dev tun
 sndbuf 0
 rcvbuf 0
 
-ca ca.crt
-cert server.crt
-key server.key
-dh dh.pem
-tls-auth ta.key 0
+ca /etc/openvpn/keys/ca.crt
+cert /etc/openvpn/keys/server.crt
+key /etc/openvpn/keys/server.key
+dh /etc/openvpn/keys/dh.pem
+tls-auth /etc/openvpn/keys/ta.key 0
 
 topology subnet
 server 10.8.0.0 255.255.255.0
-ifconfig-pool-persist ipp.txt" > /etc/openvpn/server.conf
-	echo 'push "redirect-gateway def1 bypass-dhcp"' >> /etc/openvpn/server.conf
+ifconfig-pool-persist ipp.txt" > /etc/openvpn/keys/server.conf
+	echo 'push "redirect-gateway def1 bypass-dhcp"' >> /etc/openvpn/keys/server.conf
 	# DNS
 	case $DNS in
 		1) 
 		# Obtain the resolvers from resolv.conf and use them for OpenVPN
 		grep -v '#' /etc/resolv.conf | grep 'nameserver' | grep -E -o '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' | while read line; do
-			echo "push \"dhcp-option DNS $line\"" >> /etc/openvpn/server.conf
+			echo "push \"dhcp-option DNS $line\"" >> /etc/openvpn/keys/server.conf
 		done
 		;;
 		2) 
-		echo 'push "dhcp-option DNS 8.8.8.8"' >> /etc/openvpn/server.conf
-		echo 'push "dhcp-option DNS 8.8.4.4"' >> /etc/openvpn/server.conf
+		echo 'push "dhcp-option DNS 8.8.8.8"' >> /etc/openvpn/keys/server.conf
+		echo 'push "dhcp-option DNS 8.8.4.4"' >> /etc/openvpn/keys/server.conf
 		;;
 		3)
-		echo 'push "dhcp-option DNS 185.121.177.177"' >> /etc/openvpn/server.conf
-		echo 'push "dhcp-option DNS 185.121.177.53"' >> /etc/openvpn/server.conf
+		echo 'push "dhcp-option DNS 185.121.177.177"' >> /etc/openvpn/keys/server.conf
+		echo 'push "dhcp-option DNS 185.121.177.53"' >> /etc/openvpn/keys/server.conf
 		;;
 		4) 
-		echo 'push "dhcp-option DNS 129.250.35.250"' >> /etc/openvpn/server.conf
-		echo 'push "dhcp-option DNS 129.250.35.251"' >> /etc/openvpn/server.conf
+		echo 'push "dhcp-option DNS 129.250.35.250"' >> /etc/openvpn/keys/server.conf
+		echo 'push "dhcp-option DNS 129.250.35.251"' >> /etc/openvpn/keys/server.conf
 		;;
 		5) 
-		echo 'push "dhcp-option DNS 74.82.42.42"' >> /etc/openvpn/server.conf
+		echo 'push "dhcp-option DNS 74.82.42.42"' >> /etc/openvpn/keys/server.conf
 		;;
 		6) 
-		echo 'push "dhcp-option DNS 64.6.64.6"' >> /etc/openvpn/server.conf
-		echo 'push "dhcp-option DNS 64.6.65.6"' >> /etc/openvpn/server.conf
+		echo 'push "dhcp-option DNS 64.6.64.6"' >> /etc/openvpn/keys/server.conf
+		echo 'push "dhcp-option DNS 64.6.65.6"' >> /etc/openvpn/keys/server.conf
 		;;
 	esac
 	echo "keepalive 10 120
@@ -331,7 +331,7 @@ persist-tun
 status /dev/null
 log-append /dev/null
 verb 0
-crl-verify crl.pem" >> /etc/openvpn/server.conf
+crl-verify crl.pem" >> /etc/openvpn/keys/server.conf
 	# Enable net.ipv4.ip_forward for the system
 	sed -i '/\<net.ipv4.ip_forward\>/c\net.ipv4.ip_forward=1' /etc/sysctl.conf
 	if ! grep -q "\<net.ipv4.ip_forward\>" /etc/sysctl.conf; then
